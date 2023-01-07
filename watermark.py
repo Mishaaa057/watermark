@@ -34,12 +34,12 @@ class Watermark:
         # Check if need to resize
         # Check for resize by pixels
         if self.size and not self.size_ptc:
-            print("Resize by pixels")
+            print("Resize watermark by pixels")
             watermark = watermark.resize(self.size)
 
         # Check for resize by percantege
         elif not self.size and self.size_ptc:
-            print("Resize by percantege")
+            print("Resize watermark by percantege")
 
             width, length = watermark.size
             new_width = int(width * (self.size_ptc/100))
@@ -49,7 +49,7 @@ class Watermark:
 
         # Check if there no need to resize
         elif not self.size and not self.size_ptc:
-            print("Do not resize")
+            print("Do not resize watermark")
 
         else:
             print("Wrong input!")
@@ -60,6 +60,9 @@ class Watermark:
             print("Change transparent level")
             new_transparent_level = int(255*(self.transparent_level / 100))
             watermark.putalpha(new_transparent_level)
+        else:
+            print("Do not change transparent level.")
+            watermark.putalpha(255)
 
         return watermark
 
@@ -93,7 +96,7 @@ class Watermark:
 
 
     def run(self):
-        print("Runing")
+        print("Running")
         # Create copy of files
         print("Creating copy of files...")
         copytree(self.target_folder, self.result_folder)
@@ -101,8 +104,6 @@ class Watermark:
 
         # Get all file paths
         path_list = self.read_path(self.result_folder)
-        for path in path_list:
-            print(path)
 
         # Add watermark
         watermark = self.load_watermark(self.watermark_path)
@@ -115,23 +116,28 @@ class Watermark:
             print("Result folder already exists")"""
         
         for image_path in path_list:
-            # add watermark to each image
-            im = Image.open(image_path)
-            
-            result_im = im.copy()
-            
-            # Calculate position of watermark on each image
-            x_size, y_size = watermark.size
-            x_pos, y_pos = self.calculate_postion([x_size, y_size], result_im)
-            result_im.paste(watermark, (x_pos,y_pos), watermark)
+            try:
+                # add watermark to each image
+                im = Image.open(image_path)
+                
+                result_im = im.copy()
+                
+                # Calculate position of watermark on each image
+                x_size, y_size = watermark.size
+                x_pos, y_pos = self.calculate_postion([x_size, y_size], result_im)
+                result_im.paste(watermark, (x_pos,y_pos), watermark)
 
-            # Create new path for image with watermark
-            result_path = os.path.join(self.result_folder, os.path.basename(image_path))
-            result_im.save(image_path)
+                # Create new path for image with watermark
+                result_path = os.path.join(self.result_folder, os.path.basename(image_path))
+                result_im.save(image_path)
+                print(f"Added watermark to \"{os.path.basename(image_path)}\"")
+            except:
+                print(f"Unable to add watermark to \"{os.path.basename(image_path)}\"")
+                
 
 def main():
     mark = Watermark(watermark_path=r"C:\Users\Misha\Projects\watermark\sign.jpg",
-            target_folder=r"C:\Users\Misha\Projects\watermark\target_images", size=[100,100], transparent_level=50)
+            target_folder=r"C:\Users\Misha\Projects\watermark\target_images", size_ptc=50, transparent_level=50)
     mark.result_folder=r"C:\Users\Misha\Projects\watermark\result"
     mark.run()
 
