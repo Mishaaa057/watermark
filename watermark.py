@@ -1,22 +1,116 @@
 import os
 from PIL import Image
 from shutil import copytree
+from datetime import datetime
 
 
 class Watermark:
 
-    def __init__(self, watermark_path, target_folder, position=None, size=[], size_ptc=False, transparent_level=100):
+    def __init__(self, watermark_path, target_folder_path, result_folder_path=None, 
+                position=None, size=[], size_ptc=False, transparent_level=100):
+
         self.watermark_path = watermark_path
-        self.target_folder = target_folder
-        self.result_folder = None
+        self.target_folder_path = target_folder_path
+        self.result_folder_path = result_folder_path # 
         self.position = position 
         self.size = size
         self.size_ptc = size_ptc
         self.transparent_level = transparent_level
+
+        self.valid_exstentions = [".png", ".jpg", ".webp", ".ppm",
+                                ".tiff", ".gif", ".bmp"]
     
+    def get_curr_time(self):
+        """
+        Get current date and time in one string
+        """
+        now = datetime.now()
+        dt_string = now.strftime("%Y%m%d%H%M%S")
+        return dt_string
+    
+    def create_name(self):
+        """
+        Create name for result folder
+        where iamges with watermark will be stored
+        """
+        name = f"{self.get_curr_time()}"
+        return name
+
+    def is_data_valid(self):
+        """
+        Check if all given data is valid
+        return: boolean 
+        """
+
+        is_valid = True
+        
+        # Check for watermark path and check is image is valid
+        # Check path if file exists
+
+        try:
+            # Make raw string (to skip possible special signs)
+            self.watermark_path = r"{}".format(self.watermark_path)
+            
+            if os.path.isfile(self.watermark_path):
+                # Check if file with a proper extension
+                ext = os.path.splitext(self.watermark_path)[-1]
+                if ext in self.valid_exstentions:
+                    print("Watermark is valid")
+                else:
+                    print("[!] Incorrect extention for watermark image")
+                    is_valid = False
+
+            else:
+                print(f"[!] There is no such file with path \"{self.watermark_path}\"")
+                is_valid = False
+
+        except Exception as err:
+            print("[!] Unexpected problem occured while checking watermark")
+            print(err)
+            is_valid = False
+        
+        # Check if target folder exists
+        try:
+            # Make raw string
+            self.target_folder_path = r"{}".format(self.target_folder_path)
+
+            if os.path.isdir(self.target_folder_path):
+                print("Target folder exists")
+            else:
+                print(f"[!] There is no such folder with path \"{self.target_folder_path}\"")
+                is_valid = False
+
+        except Exception as err:
+            print("[!] Unexpected problem occured while checking target folder path")
+            print(err)
+            is_valid = False
+
+        # Check for result folder path
+        try:
+            # Make raw string
+            self.result_folder_path = r"{}".format(self.result_folder_path)
+
+            # Get and check path to directory where result folder shoud be created
+            path_to_folder = os.path.dirname(self.result_folder_path)
+
+            if os.path.isdir(path_to_folder):
+                print("Path to result folder exists")
+            else:
+                print(f"[!] There is no such path for result folder\"{path_to_folder}\"")
+                is_valid = False
+
+        except Exception as err:
+            print("[!] Unexpected problem occured while checking result folder path")
+            print(err)
+            is_valid = False
+
+
 
     def read_path(self, target_path, path_list=[]):
-        
+        """
+        Get paths of all files in the directory recursively
+        return:[str]
+        """
         for filename in os.listdir(target_path):
             filepath = os.path.join(target_path ,filename)
 
@@ -29,18 +123,19 @@ class Watermark:
 
 
     def load_watermark(self, path):
-        # Prepare water mark, check for changes 
+        """ Load and prepare water mark, check for changes
+            return: PIL.Image """
         watermark = Image.open(path)
         
         # Check if need to resize
         # Check for resize by pixels
         if self.size and not self.size_ptc:
-            print("Resize watermark by pixels")
+            print("Change watermark size by pixels")
             watermark = watermark.resize(self.size)
 
         # Check for resize by percantege
         elif not self.size and self.size_ptc:
-            print("Resize watermark by percantege")
+            print("Change watermark size by percantege")
 
             width, length = watermark.size
             new_width = int(width * (self.size_ptc/100))
@@ -69,8 +164,13 @@ class Watermark:
         return watermark
 
 
-    # Positions TR, TL, BR, BL / Top right, top left..
-    def calculate_postion(self, watermark_size:list, target_image:Image, position="BL"):
+    # Positions [TR, TL, BR, BL] in which corner watermark will be placed
+    def calculate_postion(self, watermark_size:list, target_image:Image, position="BR"):
+        """
+        Function calculate position for watermark
+        return: x, y
+        Where x and y represents position for watermark in pixels
+        """
         x, y = 0, 0
 
         x_size, y_size = watermark_size
@@ -99,23 +199,27 @@ class Watermark:
 
     def run(self):
         print("Running")
+
+        print("Checking if data is valid...")
+        is_valid = self.is_data_valid()
+
         # Create copy of files
         print("Creating copy of files...")
-        copytree(self.target_folder, self.result_folder)
+        
+        # Create path to result folder
+        print("Name of folder with result images -", self.create_name())
+        result_folder_with_name = os.path.join(self.result_folder_path, self.create_name())
+        
+        # Create result folder with raw images 
+        copytree(self.target_folder_path, result_folder_with_name)
 
 
         # Get all file paths
-        path_list = self.read_path(self.result_folder)
+        path_list = self.read_path(result_folder_with_name)
 
         # Add watermark
         watermark = self.load_watermark(self.watermark_path)
-        
-        """# Check for result folder
-        if os.path.basename(self.result_folder) not in os.listdir():
-            print("Creating new result folder...")
-            os.mkdir(self.result_folder)
-        else:
-            print("Result folder already exists")"""
+
         
         for image_path in path_list:
             try:
@@ -127,24 +231,25 @@ class Watermark:
                 # Calculate position of watermark on each image
                 x_size, y_size = watermark.size
                 x_pos, y_pos = self.calculate_postion([x_size, y_size], result_im)
+                
+                # Add watermark and save result image
                 result_im.paste(watermark, (x_pos,y_pos), watermark)
-
-                # Create new path for image with watermark
-                result_path = os.path.join(self.result_folder, os.path.basename(image_path))
                 result_im.save(image_path)
+
                 print(f"Added watermark to \"{os.path.basename(image_path)}\"")
             except:
                 print(f"Unable to add watermark to \"{os.path.basename(image_path)}\"")
-                
+
 
 def main():
-    r"""
-    mark = Watermark(watermark_path=r"C:\Users\Misha\Projects\watermark\sign.jpg",
-            target_folder=r"C:\Users\Misha\Projects\watermark\target_images", size_ptc=50, transparent_level=50)
-    mark.result_folder=r"C:\Users\Misha\Projects\watermark\result"
+    mark = Watermark(watermark_path=r"C:\Users\KUKUBIK\Projects\watermark\sign.jpg",
+            result_folder_path=r"C:\Users\KUKUBIK\Projects\watermark",
+            target_folder_path=r"C:\Users\KUKUBIK\Projects\watermark\target_images",
+            size_ptc=50, transparent_level=50)
     mark.run()
-    """
 
+
+    """
     # Ask user for data (path to target folder, path to watermark, etc.)
 
     watermark_path = ""
@@ -280,11 +385,9 @@ def main():
     print("Size in ptc -", size_ptc)
     print("Transparent level -", transparent_level)
     
-    marking = Watermark(watermark_path=watermark_path, target_folder=target_folder,
-        size=size, size_ptc=size_ptc, transparent_level=transparent_level)
-    marking.result_folder = result_folder_path
-    marking.run()
-
+    """
+    
+    
 
 if __name__=="__main__":
     main()
