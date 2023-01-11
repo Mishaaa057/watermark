@@ -115,7 +115,7 @@ class Watermark:
                 print("[!] Wrong position entered")
                 is_valid = False
             else:
-                print("Position is correct")
+                print("Watermark position is valid")
         else:
             print("Position not given, using Bottom Left corner")
             self.position = "BL"
@@ -128,14 +128,16 @@ class Watermark:
             print("Change watermark size by pixels")
 
             # Check if entered size in pixels is valid
-            if len(self.size) == 2:
-                if type(self.size[0]) == int and type(self.size[1]) == int:
+            try:
+                if len(self.size) == 2:
+                    self.size[0] = int(self.size[0])
+                    self.size[1] = int(self.size[1])
                     print("Size in pixels is valid")
                 else:
-                    print("[!] Wrong size in pixels entered!")
+                    print("[!] Wrong size in pixels given")
                     is_valid = False
-            else:
-                print("[!] Wrong size in pixels entered")
+            except:
+                print("[!] Unexpected problem occured while checking size in pixels")
                 is_valid = False
 
         # Check for resize by percantege
@@ -143,14 +145,16 @@ class Watermark:
             print("Change watermark size by percantege")
 
             # Check if entered size in percantage is correct
-            if type(self.size_ptc) == int:
+            try:
+                self.size_ptc = int(self.size_ptc)
                 if self.size_ptc >= 1:
                     print("Size in percantage is valid")
                 else:
                     print("[!] Size in percantage cannot be less than 1")
                     is_valid = False
-            else:
-                print("[!] Wrong size in percantage given")
+            except:
+                print("[!] Unexpected problem occured while checking size in percantage")
+                is_valid = False
 
         # Check if there no need to resize
         elif not self.size and not self.size_ptc:
@@ -162,24 +166,21 @@ class Watermark:
         
         # Check if transparent level is valid
         if self.transparent_level:
-            if type(self.transparent_level) == int:
+            try:
+                self.transparent_level = int(self.transparent_level)
                 if 1 <= self.transparent_level <= 100:
                     print("Transparent level is valid")
                 else:
                     print("[!] Transparent level must be between 1 and 100")
                     is_valid = False
-            else:
-                print("[!] Wrong transparent level data type given")
+            except:
+                print("[!] Unexpected problem occured while checking transparent level")
                 is_valid = False
         else:
             print("Dont change transparent level")
         
         return is_valid
         
-
-
-        
-
 
     def read_path(self, target_path, path_list=[]):
         """
@@ -219,7 +220,6 @@ class Watermark:
         # Check for transparent level
         if self.transparent_level < 100:
             # normal transparent level is 255 = 100%
-            print("Change transparent level")
             new_transparent_level = int(255*(self.transparent_level / 100))
             watermark.putalpha(new_transparent_level)
         else:
@@ -230,7 +230,7 @@ class Watermark:
 
 
     # Positions [TR, TL, BR, BL] in which corner watermark will be placed
-    def calculate_postion(self, watermark_size:list, target_image:Image, position="BR"):
+    def calculate_postion(self, watermark_size:list, target_image:Image, position):
         """
         Function calculate position for watermark
         return: x, y
@@ -270,7 +270,7 @@ class Watermark:
         if is_valid:
             print("Given data is valid")
         else:
-            print("[!] Given wrong data")
+            print("[!] Given wrong data, the program stops")
             exit()
         
         # Create copy of files
@@ -300,7 +300,7 @@ class Watermark:
                 
                 # Calculate position of watermark on each image
                 x_size, y_size = watermark.size
-                x_pos, y_pos = self.calculate_postion([x_size, y_size], result_im)
+                x_pos, y_pos = self.calculate_postion([x_size, y_size], result_im, position=self.position)
                 
                 # Add watermark and save result image
                 result_im.paste(watermark, (x_pos,y_pos), watermark)
@@ -315,7 +315,9 @@ def main():
     mark = Watermark(watermark_path=r"C:\Users\KUKUBIK\Projects\watermark\sign.jpg",
             result_folder_path=r"C:\Users\KUKUBIK\Projects\watermark",
             target_folder_path=r"C:\Users\KUKUBIK\Projects\watermark\target_images",
-            size_ptc=50, transparent_level=50)
+            size_ptc=None, transparent_level="50",
+            size=[100,100],
+            position="TR")
     mark.run()
 
 
