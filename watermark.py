@@ -11,14 +11,15 @@ class Watermark:
 
         self.watermark_path = watermark_path
         self.target_folder_path = target_folder_path
-        self.result_folder_path = result_folder_path # 
-        self.position = position 
+        self.result_folder_path = result_folder_path
+        self.position = position
         self.size = size
         self.size_ptc = size_ptc
         self.transparent_level = transparent_level
 
         self.valid_exstentions = [".png", ".jpg", ".webp", ".ppm",
                                 ".tiff", ".gif", ".bmp"]
+        self.valid_positions = ["BL", "BR", "TL", "TR"]
     
     def get_curr_time(self):
         """
@@ -28,6 +29,7 @@ class Watermark:
         dt_string = now.strftime("%Y%m%d%H%M%S")
         return dt_string
     
+
     def create_name(self):
         """
         Create name for result folder
@@ -35,6 +37,7 @@ class Watermark:
         """
         name = f"{self.get_curr_time()}"
         return name
+
 
     def is_data_valid(self):
         """
@@ -46,7 +49,6 @@ class Watermark:
         
         # Check for watermark path and check is image is valid
         # Check path if file exists
-
         try:
             # Make raw string (to skip possible special signs)
             self.watermark_path = r"{}".format(self.watermark_path)
@@ -105,6 +107,79 @@ class Watermark:
             is_valid = False
 
 
+        # Check if position is valid
+        # There 4 possible positions for watermark
+        # BL - Bottom Left, BR - Bottim Right, TL - Top Left, TR - Top Right
+        if self.position:
+            if self.position not in self.valid_positions:
+                print("[!] Wrong position entered")
+                is_valid = False
+            else:
+                print("Position is correct")
+        else:
+            print("Position not given, using Bottom Left corner")
+            self.position = "BL"
+        
+
+        # Check if entered only one type of size pixels or percantage
+
+        # Check for resize by pixels
+        if self.size and not self.size_ptc:
+            print("Change watermark size by pixels")
+
+            # Check if entered size in pixels is valid
+            if len(self.size) == 2:
+                if type(self.size[0]) == int and type(self.size[1]) == int:
+                    print("Size in pixels is valid")
+                else:
+                    print("[!] Wrong size in pixels entered!")
+                    is_valid = False
+            else:
+                print("[!] Wrong size in pixels entered")
+                is_valid = False
+
+        # Check for resize by percantege
+        elif not self.size and self.size_ptc:
+            print("Change watermark size by percantege")
+
+            # Check if entered size in percantage is correct
+            if type(self.size_ptc) == int:
+                if self.size_ptc >= 1:
+                    print("Size in percantage is valid")
+                else:
+                    print("[!] Size in percantage cannot be less than 1")
+                    is_valid = False
+            else:
+                print("[!] Wrong size in percantage given")
+
+        # Check if there no need to resize
+        elif not self.size and not self.size_ptc:
+            print("Do not resize watermark")
+
+        else:
+            print("[!] Resize is not valid, please use only one resize method (by pixels or percantage)")
+            is_valid = False
+        
+        # Check if transparent level is valid
+        if self.transparent_level:
+            if type(self.transparent_level) == int:
+                if 1 <= self.transparent_level <= 100:
+                    print("Transparent level is valid")
+                else:
+                    print("[!] Transparent level must be between 1 and 100")
+                    is_valid = False
+            else:
+                print("[!] Wrong transparent level data type given")
+                is_valid = False
+        else:
+            print("Dont change transparent level")
+        
+        return is_valid
+        
+
+
+        
+
 
     def read_path(self, target_path, path_list=[]):
         """
@@ -128,29 +203,19 @@ class Watermark:
         watermark = Image.open(path)
         
         # Check if need to resize
+
         # Check for resize by pixels
         if self.size and not self.size_ptc:
-            print("Change watermark size by pixels")
             watermark = watermark.resize(self.size)
 
         # Check for resize by percantege
         elif not self.size and self.size_ptc:
-            print("Change watermark size by percantege")
-
             width, length = watermark.size
             new_width = int(width * (self.size_ptc/100))
             new_length = int(length * (self.size_ptc/100))
 
             watermark = watermark.resize((new_width, new_length))
 
-        # Check if there no need to resize
-        elif not self.size and not self.size_ptc:
-            print("Do not resize watermark")
-
-        else:
-            print("Wrong input!")
-            exit()
-        
         # Check for transparent level
         if self.transparent_level < 100:
             # normal transparent level is 255 = 100%
@@ -202,7 +267,12 @@ class Watermark:
 
         print("Checking if data is valid...")
         is_valid = self.is_data_valid()
-
+        if is_valid:
+            print("Given data is valid")
+        else:
+            print("[!] Given wrong data")
+            exit()
+        
         # Create copy of files
         print("Creating copy of files...")
         
