@@ -1,4 +1,5 @@
 import os
+import argparse
 from PIL import Image
 from shutil import copytree
 from datetime import datetime
@@ -7,7 +8,7 @@ from datetime import datetime
 class Watermark:
 
     def __init__(self, watermark_path, target_folder_path, result_folder_path=None, 
-                position=None, size=[], size_ptc=False, transparent_level=100):
+                position=None, size=None, size_ptc=None, transparent_level=None):
 
         self.watermark_path = watermark_path
         self.target_folder_path = target_folder_path
@@ -93,12 +94,12 @@ class Watermark:
             self.result_folder_path = r"{}".format(self.result_folder_path)
 
             # Get and check path to directory where result folder shoud be created
-            path_to_folder = os.path.dirname(self.result_folder_path)
-
-            if os.path.isdir(path_to_folder):
+            #path_to_folder = os.path.dirname(self.result_folder_path)
+            
+            if os.path.isdir(self.result_folder_path):
                 print("Path to result folder exists")
             else:
-                print(f"[!] There is no such path for result folder\"{path_to_folder}\"")
+                print(f"[!] There is no such path for result folder \"{self.result_folder_path}\"")
                 is_valid = False
 
         except Exception as err:
@@ -178,6 +179,7 @@ class Watermark:
                 is_valid = False
         else:
             print("Dont change transparent level")
+            self.transparent_level = 100
         
         return is_valid
         
@@ -223,7 +225,7 @@ class Watermark:
             new_transparent_level = int(255*(self.transparent_level / 100))
             watermark.putalpha(new_transparent_level)
         else:
-            print("Do not change transparent level.")
+            # Dont change transparent level, set standard value
             watermark.putalpha(255)
 
         return watermark
@@ -281,6 +283,7 @@ class Watermark:
         result_folder_with_name = os.path.join(self.result_folder_path, self.create_name())
         
         # Create result folder with raw images 
+        print(self.target_folder_path, result_folder_with_name)
         copytree(self.target_folder_path, result_folder_with_name)
 
 
@@ -311,155 +314,56 @@ class Watermark:
                 print(f"Unable to add watermark to \"{os.path.basename(image_path)}\"")
 
 
+def built_arg_parser(descr):
+    parser = argparse.ArgumentParser(descr)
+    parser.add_argument("-wp", "--watermark_path", 
+        help="Full path to watermark")
+
+    parser.add_argument("-rp", "--result_path",
+        help="Path where result folder should be created")
+
+    parser.add_argument("-tp", "--target_path",
+        help="Path to target folder with images")
+
+    parser.add_argument("-p", "--position", metavar="BL",
+        help="Position of corner for watermark (BL - Bottom Left, BR - Bottom Right, TL - Top Left, TR- Top Right )")
+
+    parser.add_argument("-s", "--size", nargs=2, type=int, metavar="int",
+        help="Size of watermark in pixels")
+
+    parser.add_argument("-sp", "--size_percantage", type=int,
+        help="Size of watermark in percantage ")
+
+    parser.add_argument("-tl", "--transparent_level", type=int,
+        help="Transparent level of watermark")
+
+    return parser
+
+
 def main():
-    mark = Watermark(watermark_path=r"C:\Users\KUKUBIK\Projects\watermark\sign.jpg",
-            result_folder_path=r"C:\Users\KUKUBIK\Projects\watermark",
-            target_folder_path=r"C:\Users\KUKUBIK\Projects\watermark\target_images",
-            size_ptc=None, transparent_level="50",
-            size=[100,100],
-            position="TR")
-    mark.run()
 
-
+    description = """
+    Skript that adds watermark to each image in target folder
+    User have to provide full path to watermark image, target folder and result folder
     """
-    # Ask user for data (path to target folder, path to watermark, etc.)
+    parser = built_arg_parser(description)
+    args = parser.parse_args()
 
-    watermark_path = ""
-    target_folder = ""
-    size = []
-    size_ptc = 100
-    transparent_level = 100
-    result_folder_path = ""
-
-    print("Enter data to add watermarks for images")
-    
-    while True:
-        # Get path to watermark
-        path = input("\nEnter path to watermark (etner 0 to exit): ")
-        if path == "0":
-            break
-
-        path = r"{}".format(path)
-        is_valid = os.path.isfile(path)
-        #print("is valid:", is_valid)
-
-        if is_valid:
-            watermark_path = path
-            break
-        else:
-            print("[!] There no such image with that path, please try again.")
-    
-    while True:
-        # Get path to target folder with images
-        path = input("\nEnter path to folder with images (etner 0 to exit): ")
-        if path == "0":
-            break
+    # Check if any arguments given
+    if any(vars(args).values()):
+        mark = Watermark(watermark_path=args.watermark_path,
+                result_folder_path=args.result_path,
+                target_folder_path=args.target_path,
+                position=args.position,
+                size=args.size,
+                size_ptc=args.size_percantage,
+                transparent_level=args.transparent_level)
+        mark.run()
         
-        path = r"{}".format(path)
-        is_valid = os.path.isdir(path)
+    else:
+        # If arguments not given show help and exit
+        parser.print_help()
 
-        if is_valid:
-            target_folder = path
-            break
-        else:
-            print("[!] There is no such folder with that path, please try again.")
-    
-    print("\n[i] Next arguments are optional, you may skip them by pressing [ENTER]")
-
-    while True:
-        # Get path to result folder
-        print("\nEnter path fore result folder where new images will be saved,")
-        print("if not given, folder will be created in same directory with this script")
-        path = input("(to exit enter 0): ")
-        if path == "0":
-            break
-
-        elif path == "":
-            path = os.getcwd()
-            path = os.path.join(path,"results")
-            result_folder_path = path
-            break
-
-        else:
-            path = r"{}".format(path)
-            is_valid = os.path.isdir(path)
-
-            if is_valid:
-                name = input("Enter result folder name: ")
-                path = os.path.join(path, name)
-                result_folder_path = path
-                break
-            else:
-                print("[!] There is no directory with that path, please try again.")
-    
-
-    while True:
-        # Get size in pixels
-        print("\nTo enter size in percatage, skip this one")
-        input_size = input("Enter size in pixels or skip, separate by x (100x100)(etner 0 to exit): ")
-        if input_size == "0":
-            break
-        elif input_size == "":
-            break
-        
-        try:
-            input_size = input_size.split("x")
-            input_size[0] = int(input_size[0])
-            input_size[1] = int(input_size[1])
-            size = input_size
-            size_ptc = False
-            break
-        except:
-            print("[!] Wrong input, please try again.")
-    
-    if not size:
-        while True:
-            # Get size in percantage
-            input_size = input("\nEnter size in percantage no less than 1 or skip (etner 0 to exit): ")
-            if input_size == "0":
-                break
-            elif input_size == "":
-                break
-            
-            try:
-                input_size = int(input_size)
-                if input_size >= 1:
-                    size_ptc = input_size 
-                    break
-                else:
-                    print("[!] Wrong input, please try again.")
-            except:
-                print("[!] Wrong input, please try again.")
-
-    while True:
-        # Get transparent level
-        level = input("\nEnter transparent level between 1 and 100 (etner 0 to exit): ")
-        if level == "0":
-            break
-        elif level == "":
-            break
-        
-        try:
-            level = int(level)
-            if 1 <= level <= 100:
-                transparent_level = level
-                break
-            else:
-                print("[!] Wrong input, please try again.")
-            
-        except:
-            print("[!] Wrong input, please try again.")
-
-    print("Watermark -", watermark_path)
-    print("Target folder -", target_folder)
-    print("Result folder -", result_folder_path)
-    print("Size -", size)
-    print("Size in ptc -", size_ptc)
-    print("Transparent level -", transparent_level)
-    
-    """
-    
-    
 
 if __name__=="__main__":
     main()
